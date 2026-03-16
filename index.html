@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>QuickRoute | Smart Navigation</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <!-- Cyberpunk Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Michroma&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- QR Scan Overlay -->
+    <div id="qr-overlay" class="qr-overlay">
+        <div class="qr-content glass-panel">
+            <div class="qr-icon"></div>
+            <h2>SCAN QR CODE</h2>
+            <p>Please scan a building QR code at your current location to initialize smart routing.</p>
+            
+            <div class="manual-entry-section">
+                <div class="divider"><span>OR MANUAL OVERRIDE</span></div>
+                <select id="manual-location-select" class="glass-select">
+                    <option value="" disabled selected>Select Demo Location...</option>
+                    <option value="gate_1">Main Entrance (Gate 1)</option>
+                    <option value="it_lab_1">IT Lab 101 (Floor G)</option>
+                    <option value="library_1">Central Library (Floor 1)</option>
+                </select>
+                <button id="manual-entry-btn" class="action-btn glow-btn">Start Demo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Info Strip -->
+    <header class="info-strip">
+        <div class="status-indicator"></div>
+        <span id="building-info">INITIATING TERMINAL...</span>
+    </header>
+
+    <!-- Holographic Search Bar -->
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search room, lab, or hall..." autocomplete="off">
+        <div id="search-results" class="search-results hidden"></div>
+    </div>
+
+    <!-- Directory Sidebar Toggle -->
+    <button id="directory-toggle" class="directory-toggle glass-panel">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- Interactive Directory Sidebar -->
+    <aside id="directory-sidebar" class="directory-sidebar glass-panel closed">
+        <div class="sidebar-header">
+            <h3>Building Directory</h3>
+            <button id="close-directory" class="close-btn">&times;</button>
+        </div>
+        <div id="directory-content" class="directory-content">
+            <!-- Populated by JS -->
+        </div>
+    </aside>
+
+    <!-- Map Container -->
+    <main id="map-container">
+        <!-- FUI Architectural Overlays -->
+        <div class="fui-bracket bracket-tl"></div>
+        <div class="fui-bracket bracket-tr"></div>
+        <div class="fui-bracket bracket-bl"></div>
+        <div class="fui-bracket bracket-br"></div>
+        
+        <!-- North Star / Compass FUI -->
+        <div class="fui-north-star">
+            <svg viewBox="0 0 100 100" width="40" height="40" stroke="var(--primary-cyan)" stroke-width="1" fill="none">
+                <circle cx="50" cy="50" r="40" stroke-dasharray="4,4" opacity="0.3"></circle>
+                <circle cx="50" cy="50" r="20" opacity="0.5"></circle>
+                <path d="M50 0 L55 45 L100 50 L55 55 L50 100 L45 55 L0 50 L45 45 Z" fill="rgba(0, 255, 255, 0.2)"></path>
+                <text x="50" y="15" fill="var(--primary-cyan)" font-size="12" text-anchor="middle" font-family="Michroma">N</text>
+            </svg>
+        </div>
+
+        <!-- Live FUI Data Feed -->
+        <div class="fui-live-feed" id="live-feed">
+            <div class="feed-line">> SYSTEM STARTUP...</div>
+            <div class="feed-line">> INITIALIZING MATRICES...</div>
+            <div class="feed-line">> WAITING FOR SYNC...</div>
+        </div>
+
+        <div id="map"></div>
+    </main>
+
+    <!-- Floor Selector -->
+    <aside class="floor-selector">
+        <button class="floor-btn" data-floor="2">2</button>
+        <button class="floor-btn" data-floor="1">1</button>
+        <button class="floor-btn active" data-floor="G">G</button>
+    </aside>
+
+    <!-- Compass / Recenter Action -->
+    <button id="recenter-btn" class="compass-btn hidden glass-panel" title="Recenter to User Location">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+    </button>
+
+    <!-- Route Information Bottom Panel -->
+    <footer id="route-panel" class="route-panel hidden">
+        <div class="panel-handle"></div>
+        <div class="route-header">
+            <h2 id="destination-name">Destination</h2>
+            <span id="destination-type" class="badge">Type</span>
+        </div>
+        <div class="route-stats">
+            <div class="stat-box">
+                <span class="stat-label">DISTANCE</span>
+                <span class="stat-value" id="route-distance">-- m</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">EST. TIME</span>
+                <span class="stat-value" id="route-time">-- min</span>
+            </div>
+        </div>
+        <button id="nav-action-btn" class="action-btn" onclick="stopNavigation()">CANCEL NAVIGATION</button>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
